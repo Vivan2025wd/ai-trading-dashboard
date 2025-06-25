@@ -1,65 +1,52 @@
-# backend/main.py
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
-import subprocess
-import os
 import json
+import sys
+import os
+import pandas as pd
+from strategies import rsi, macd, ema
+from utils.fetch import fetch_ohlcv_data
 
-app = FastAPI()
+STRATEGY_MAP = {
+    "rsi": rsi.backtest_rsi_strategy,
+    "macd": macd.backtest_macd_strategy,
+    "ema": ema.backtest_ema_strategy,
+}
 
-# Allow frontend CORS
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
+def run_backtest(config):
+    symbol = config["symbol"]
+    interval = config.get("interval", "15m")
+    strategy = config["strategy"]
+    params = config.get("params", {})
 
-# Models
-class BacktestRequest(BaseModel):
-    symbol: str
-    interval: str = "15m"
-    strategy: str
-    params: Optional[dict] = {}
+    # Prepare data folder and CSV path
+    os.makedirs("data", exist_ok=True)
+    csv_path = f"data/{symbol}_{interval}.csv"
 
-class Trade(BaseModel):
-    type: str
-    price: float
-    index: int
-    profit: Optional[float] = None
-
-class BacktestResponse(BaseModel):
-    trades: List[Trade]
-    message: str
-
-@app.get("/")
-def root():
-    return {"message": "AI Trading API Running"}
-
-@app.post("/backtest", response_model=BacktestResponse)
-def run_backtest(request: BacktestRequest):
-    # Write config to a temp file
-    config_path = "temp_config.json"
-    with open(config_path, "w") as f:
-        json.dump(request.dict(), f)
-
-    # Call the Python backtest script
-    process = subprocess.run(
-        ["python", "backtester/runner.py", config_path],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        text=True
-    )
-
-    if process.returncode != 0:
-        raise HTTPException(status_code=500, detail=process.stderr)
-
+    # Load cached data or fetch new from Binance
     try:
-        trades = json.loads(process.stdout)
-    except json.JSONDecodeError:
-        raise HTTPException(status_code=500, detail="Invalid output from backtest runner")
+        df = pd.read_csv(csv_path)
+    except FileNotFoundError:
+        print(f"⚡ Fetching new OHLCV data for {symbol} {interval} ...")
+        df = fetch_ohlcv_data(symbol, interval)
+        df.to_csv(csv_path, index=False)
 
-    return BacktestResponse(trades=trades, message="✅ Backtest complete")
+    if strategy not in STRATEGY_MAP:
+        output = {"error": f"Strategy '{strategy}' not supported"}
+        print(json.dumps(output))
+        return
+
+    trades = STRATEGY_MAP[strategy](df, **params)
+
+    # Convert numpy types to native Python types for JSON serialization
+    def convert_trade(trade):
+        return {k: (float(v) if hasattr(v, 'item') else v) for k, v in trade.items()}
+
+    trades = [convert_trade(t) for t in trades]
+
+    output = {"trades": trades, "message": "✅ Backtest complete"}
+    print(json.dumps(output))
+
+if __name__ == "__main__":
+    config_path = sys.argv[1] if len(sys.argv) > 1 else "temp_config.json"
+    with open(config_path) as f:
+        config = json.load(f)
+    run_backtest(config)
