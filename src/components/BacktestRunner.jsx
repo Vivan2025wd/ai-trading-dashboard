@@ -1,4 +1,3 @@
-// src/components/BacktestRunner.jsx
 import React, { useState } from 'react';
 
 function BacktestRunner() {
@@ -36,7 +35,9 @@ function BacktestRunner() {
   return (
     <div>
       <button onClick={runBacktest}>Run Backtest</button>
-      {error && <div style={{color: 'red'}}>Error: {error}</div>}
+
+      {error && <div style={{ color: 'red' }}>Error: {error}</div>}
+
       {result && (
         <div>
           <h3>Backtest Results:</h3>
@@ -46,26 +47,5 @@ function BacktestRunner() {
     </div>
   );
 }
-const runBacktest = async () => {
-  const response = await fetch("http://localhost:8000/backtest", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      symbol: "BTCUSDT",
-      interval: "15m",
-      strategy: "rsi", // or "macd"
-      params: {} // Optional strategy parameters
-    })
-  });
-
-  const data = await response.json();
-  if (data.trades) {
-    setTrades(data.trades);
-    setMessage(data.message);
-  } else {
-    setError(data.error || "Unknown error");
-  }
-};
-
 
 export default BacktestRunner;

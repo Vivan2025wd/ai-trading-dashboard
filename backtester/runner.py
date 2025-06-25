@@ -1,14 +1,14 @@
-import json
+# backtester/runner.py
 import sys
-import os
+import json
 import pandas as pd
-from strategies import rsi, macd, ema
+from strategies import rsi, macd
 from utils.fetch import fetch_ohlcv_data
 
 STRATEGY_MAP = {
     "rsi": rsi.backtest_rsi_strategy,
     "macd": macd.backtest_macd_strategy,
-    "ema": ema.backtest_ema_strategy,
+    # more strategies here...
 }
 
 def run_backtest(config):
@@ -17,36 +17,25 @@ def run_backtest(config):
     strategy = config["strategy"]
     params = config.get("params", {})
 
-    # Prepare data folder and CSV path
-    os.makedirs("data", exist_ok=True)
-    csv_path = f"data/{symbol}_{interval}.csv"
-
-    # Load cached data or fetch new from Binance
     try:
-        df = pd.read_csv(csv_path)
+        df = pd.read_csv(f"data/{symbol}_{interval}.csv")
     except FileNotFoundError:
-        print(f"⚡ Fetching new OHLCV data for {symbol} {interval} ...")
         df = fetch_ohlcv_data(symbol, interval)
-        df.to_csv(csv_path, index=False)
+        df.to_csv(f"data/{symbol}_{interval}.csv", index=False)
 
     if strategy not in STRATEGY_MAP:
-        output = {"error": f"Strategy '{strategy}' not supported"}
-        print(json.dumps(output))
-        return
+        print(json.dumps({"error": f"Strategy '{strategy}' not supported"}))
+        sys.exit(1)
 
     trades = STRATEGY_MAP[strategy](df, **params)
+    print(json.dumps({"trades": trades, "message": "✅ Backtest complete"}))
 
-    # Convert numpy types to native Python types for JSON serialization
-    def convert_trade(trade):
-        return {k: (float(v) if hasattr(v, 'item') else v) for k, v in trade.items()}
-
-    trades = [convert_trade(t) for t in trades]
-
-    output = {"trades": trades, "message": "✅ Backtest complete"}
-    print(json.dumps(output))
 
 if __name__ == "__main__":
-    config_path = sys.argv[1] if len(sys.argv) > 1 else "temp_config.json"
-    with open(config_path) as f:
+    if len(sys.argv) < 2:
+        print(json.dumps({"error": "Config file path required"}))
+        sys.exit(1)
+    config_path = sys.argv[1]
+    with open(config_path, "r") as f:
         config = json.load(f)
     run_backtest(config)
