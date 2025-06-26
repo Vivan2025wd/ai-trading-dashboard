@@ -1,0 +1,6 @@
+{
+  "symbol": "BTCUSDT",
+  "strategy": "rsi",
+  "interval": "15m",
+  "params": {}
+}

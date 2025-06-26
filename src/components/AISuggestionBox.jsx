@@ -1,23 +1,45 @@
-import React, { useEffect, useState } from "react"
-import SymbolPicker from "./SymbolPicker"
+import React, { useEffect, useState } from "react";
+import SymbolPicker from "./SymbolPicker";
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT"]
+const SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT"];
 
 export default function AISuggestionBox() {
-  const [symbol, setSymbol] = useState("BTCUSDT")
-  const [suggestion, setSuggestion] = useState("Loading...")
-  const [indicators, setIndicators] = useState(null)
+  const [symbol, setSymbol] = useState("BTCUSDT");
+  const [suggestion, setSuggestion] = useState("Loading...");
+  const [indicators, setIndicators] = useState(null);
 
   useEffect(() => {
-    setSuggestion("Loading...")
-    fetch(`http://localhost:5000/api/suggestions?symbol=${symbol}`)
-      .then(res => res.json())
-      .then(data => {
-        setSuggestion(data.suggestion)
-        setIndicators(data.latest)
+    const controller = new AbortController();
+
+    setSuggestion("Loading...");
+    setIndicators(null);
+
+    fetch(`http://localhost:5000/backtester/strategies?symbol=${symbol}`, {
+      signal: controller.signal,
+      headers: {
+        Accept: "*/*",
+        Origin: "http://localhost:5173",
+      },
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP error! Status: ${res.status}`);
+        return res.json();
       })
-      .catch(() => setSuggestion("Error loading suggestion"))
-  }, [symbol])
+      .then((data) => {
+        // Adapt this based on your actual response structure
+        // Assuming data has keys: suggestion and latest (indicators)
+        setSuggestion(data.suggestion || "No suggestion available");
+        setIndicators(data.latest || null);
+      })
+      .catch((err) => {
+        if (err.name !== "AbortError") {
+          console.error("Fetch error:", err);
+          setSuggestion("Error loading suggestion");
+        }
+      });
+
+    return () => controller.abort();
+  }, [symbol]);
 
   return (
     <div className="bg-gray-800 p-4 rounded-xl shadow text-center max-w-md mx-auto">
@@ -44,6 +66,5 @@ export default function AISuggestionBox() {
         <p>Loading indicators...</p>
       )}
     </div>
-  )
+  );
 }
-
