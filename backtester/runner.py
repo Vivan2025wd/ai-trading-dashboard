@@ -10,10 +10,11 @@ PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, ".."))
 if PROJECT_ROOT not in sys.path:
     sys.path.insert(0, PROJECT_ROOT)
 
+from backend.strategy_registry import load_strategy
 from backtester.strategies import rsi, macd
 from backtester.utils.fetch import fetch_ohlcv_data
 
-# Map strategy names to functions
+# Map strategy names to functions (fallback if registry fails)
 STRATEGY_MAP = {
     "rsi": rsi.backtest_rsi_strategy,
     "macd": macd.backtest_macd_strategy,
@@ -50,10 +51,15 @@ def run_backtest(config):
             "volume": "Volume"
         }, inplace=True)
 
-        if strategy not in STRATEGY_MAP:
-            return {"error": f"Strategy '{strategy}' not supported"}
+        try:
+            strategy_func = load_strategy(strategy)
+        except Exception:
+            # Fallback to STRATEGY_MAP if registry fails or doesn't have it
+            if strategy not in STRATEGY_MAP:
+                return {"error": f"Strategy '{strategy}' not supported"}
+            strategy_func = STRATEGY_MAP[strategy]
 
-        trades = STRATEGY_MAP[strategy](df, **params)
+        trades = strategy_func(df, **params)
 
         # Format OHLCV data for frontend
         ohlcv = []
