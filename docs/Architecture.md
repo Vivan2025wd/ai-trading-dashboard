@@ -6,7 +6,19 @@ Ai trading dashboard
 |                  |        |-mongo.py
 |                  |-models-|-init.py
 |                  |                  |-trade.py
-|                  |                       
+|                  |-agents-|-agent_base.py
+|                  |               |-btcusdt_agent.py
+|                  |               |-ethusdt_agent.py
+|                  |               |-init.py
+|                  |
+|                  |-ml_engine-|-featrure_extractor.py
+|                  |                      |-init.py
+|                  |                      |-module_utils.py 
+|                  |
+|                  |mother_ai-|-coordinator.py                  
+|                  |                    |-performance_tracker.py 
+|                  |                    |- init.py
+|                  |      
 |                  |-.env
 |                  |-main.py
 |                  |-strategy_registry.py 
@@ -19,6 +31,7 @@ Ai trading dashboard
 |                     |                    |-init.py
 |                     |                    |-macd.py
 |                     |                    |-rsi.py
+|                     |
 |                     | -utils-|-_pycache_
 |                     |           |-fetch.py
 |                     |           |-init.py
@@ -52,6 +65,8 @@ Ai trading dashboard
 |        |                          |-PriceTicker.jsx
 |        |                          |-SymbolPicker.jsx
 |        |                          |-TradingViewChart.jsx     
+|        |                          |-MotherAIdecisionBox.jsx 
+|        |                          |-symbolAgentCard.jsx 
 |        |
 |        |-pages-|-Dashboard.jsx
 |        |
@@ -68,3 +83,5 @@ Ai trading dashboard
 |-tailwind.config.jsx
 |-test_config.json
 |-vite.config.js  
+
+To run backend = uvicorn backend.main:app --reload --port 8000

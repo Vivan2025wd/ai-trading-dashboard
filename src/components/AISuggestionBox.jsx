@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import SymbolPicker from "./SymbolPicker";
 
-const SYMBOLS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "ADAUSDT"];
+const SYMBOLS = ["BTCUSDT", "ETHUSDT"];
 
 export default function AISuggestionBox() {
   const [symbol, setSymbol] = useState("BTCUSDT");
@@ -14,11 +14,11 @@ export default function AISuggestionBox() {
     setSuggestion("Loading...");
     setIndicators(null);
 
-    fetch(`http://localhost:5000/backtester/strategies?symbol=${symbol}`, {
+    fetch(`http://localhost:8000/backtester/strategies?symbol=${symbol}`, {
       signal: controller.signal,
+      // You generally don't need to set Origin or Accept explicitly for local fetch
       headers: {
-        Accept: "*/*",
-        Origin: "http://localhost:5173",
+        "Accept": "application/json",
       },
     })
       .then((res) => {
@@ -26,8 +26,8 @@ export default function AISuggestionBox() {
         return res.json();
       })
       .then((data) => {
-        // Adapt this based on your actual response structure
-        // Assuming data has keys: suggestion and latest (indicators)
+        // Adjust this part based on your backend's exact response structure
+        // Assuming data looks like { suggestion: "...", latest: { close, rsi, ema, macd, bb } }
         setSuggestion(data.suggestion || "No suggestion available");
         setIndicators(data.latest || null);
       })
@@ -53,12 +53,12 @@ export default function AISuggestionBox() {
           <p>RSI: {indicators.rsi}</p>
           <p>EMA: {indicators.ema}</p>
           <p>
-            MACD: {indicators.macd?.MACD.toFixed(2)} | Signal:{" "}
-            {indicators.macd?.signal.toFixed(2)}
+            MACD: {indicators.macd?.MACD?.toFixed(2)} | Signal:{" "}
+            {indicators.macd?.signal?.toFixed(2)}
           </p>
           <p>
-            Bollinger Bands: Lower: {indicators.bb?.lower.toFixed(2)}, Middle:{" "}
-            {indicators.bb?.middle.toFixed(2)}, Upper: {indicators.bb?.upper.toFixed(2)}
+            Bollinger Bands: Lower: {indicators.bb?.lower?.toFixed(2)}, Middle:{" "}
+            {indicators.bb?.middle?.toFixed(2)}, Upper: {indicators.bb?.upper?.toFixed(2)}
           </p>
           <p className="mt-2 text-xl">{suggestion}</p>
         </>
