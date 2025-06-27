@@ -1,5 +1,6 @@
 import pandas as pd
 
+# --- MACD Calculation ---
 def compute_macd(df, fast=12, slow=26, signal=9):
     exp1 = df['Close'].ewm(span=fast, adjust=False).mean()
     exp2 = df['Close'].ewm(span=slow, adjust=False).mean()
@@ -7,6 +8,7 @@ def compute_macd(df, fast=12, slow=26, signal=9):
     signal_line = macd.ewm(span=signal, adjust=False).mean()
     return macd, signal_line
 
+# --- MACD Strategy ---
 def backtest_macd_strategy(df):
     macd, signal = compute_macd(df)
     position = 0
@@ -23,4 +25,5 @@ def backtest_macd_strategy(df):
             profit = exit_price - entry_price
             trades.append({"type": "sell", "price": exit_price, "index": i, "profit": profit})
             position = 0
+
     return trades
