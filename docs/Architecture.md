@@ -85,3 +85,4 @@ Ai trading dashboard
 |-vite.config.js  
 
 To run backend = uvicorn backend.main:app --reload --port 8000
+To run Front end = npm run dev
