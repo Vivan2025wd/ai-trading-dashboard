@@ -18,9 +18,17 @@ class ETHUSDTAgent:
     def train(self, csv_path: str):
         df = pd.read_csv(csv_path)
         df.columns = [c.lower() for c in df.columns]
-        features, labels = extract_features(df)
+
+        result = extract_features(df)
+        if result is None or not isinstance(result, (list, tuple)) or len(result) != 2:
+            raise ValueError("extract_features must return (features, labels).")
+        features, labels = result
+        if features is None or labels is None:
+            raise ValueError("Features or labels are None.")
+
         model = RandomForestClassifier(n_estimators=100, random_state=42)
         model.fit(features, labels)
+
         os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
         dump(model, MODEL_PATH)
         self.model = model
@@ -28,32 +36,33 @@ class ETHUSDTAgent:
 
     def predict(self):
         if self.model is None:
-            raise ValueError("Model is not loaded. Please train or load the model first.")
-        # Fetch latest live OHLCV data from Binance
-        df = fetch_binance_ohlcv("ETHUSDT")
-        df.columns = [c.lower() for c in df.columns]
+            raise ValueError("Model is not loaded. Train or load the model first.")
 
-        # Debug print: show column dtypes before cleaning
-        print("Columns and dtypes before dropping datetime:")
-        print(df.dtypes)
+        # Fetch live OHLCV from Binance
+        data = fetch_binance_ohlcv("ETHUSDT")
+        df = pd.DataFrame(data, columns=[
+            "open_time", "open", "high", "low", "close", "volume",
+            "close_time", "quote_asset_volume", "number_of_trades",
+            "taker_buy_base_asset_volume", "taker_buy_quote_asset_volume", "ignore"
+        ])
 
-        # Drop datetime columns that may cause issues
-        datetime_cols = df.select_dtypes(include=['datetime64[ns]']).columns
-        df = df.drop(columns=datetime_cols)
+        # Keep only needed numeric columns
+        numeric_cols = ["open", "high", "low", "close", "volume"]
+        df = df[numeric_cols].apply(pd.to_numeric, errors="coerce").dropna()
 
-        # Also drop common timestamp columns if they exist
-        for col in ['open_time', 'timestamp']:
-            if col in df.columns:
-                df = df.drop(columns=[col])
+        # Extract features
+        result = extract_features(df)
+        if result is None or not isinstance(result, (list, tuple)) or len(result) == 0:
+            raise ValueError("extract_features returned invalid features.")
+        features = result[0]
 
-        features, _ = extract_features(df)
-        latest = features.iloc[-1:]
-        prediction = self.model.predict(latest)[0]
-        confidence = max(self.model.predict_proba(latest)[0])
+        latest_features = features.iloc[-1:]
+        prediction = self.model.predict(latest_features)[0]
+        confidence = max(self.model.predict_proba(latest_features)[0])
+
         return prediction, round(confidence, 4)
 
 
 if __name__ == "__main__":
     agent = ETHUSDTAgent()
-    # Pass CSV path for training
     agent.train("backtester/data/ETHUSDT_15m.csv")
