@@ -33,16 +33,15 @@ class BTCUSDTAgent:
         df = fetch_binance_ohlcv("BTCUSDT")
         df.columns = [c.lower() for c in df.columns]
 
-        # Drop datetime columns to avoid dtype errors
-        datetime_cols = df.select_dtypes(include=['datetime64[ns]']).columns
-        df = df.drop(columns=datetime_cols)
-
-        # Drop common timestamp columns if they exist
-        for col in ['open_time', 'timestamp']:
-            if col in df.columns:
-                df = df.drop(columns=[col])
+        # Datetime columns are handled by extract_features -> preprocess_df
+        # No need to drop them here explicitly.
 
         features, _ = extract_features(df)
+
+        if features.empty:
+            print("WARN: Feature extraction returned empty, cannot predict.")
+            return None, 0.0 # Or raise an error, or handle as per system design
+
         latest = features.iloc[-1:]
         prediction = self.model.predict(latest)[0]
         confidence = max(self.model.predict_proba(latest)[0])
