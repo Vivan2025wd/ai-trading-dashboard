@@ -4,3 +4,4 @@ joblib
 ta
 fastapi
 uvicorn
+requests
