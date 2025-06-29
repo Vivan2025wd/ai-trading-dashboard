@@ -1,6 +1,4 @@
-// src/pages/Dashboard.jsx
 import { useEffect, useState } from "react";
-import AISuggestionBox from "../components/AISuggestionBox";
 import MarketTable from "../components/MarketTable";
 import PriceTicker from "../components/PriceTicker";
 import TradingViewChart from "../components/TradingViewChart";
@@ -12,19 +10,25 @@ export default function Dashboard() {
   const [aiError, setAiError] = useState(null);
 
   useEffect(() => {
+    let isMounted = true;
+
     const fetchDecision = async () => {
       try {
         const res = await fetch("http://127.0.0.1:8000/mother-ai/decision");
         if (!res.ok) throw new Error("Failed to fetch Mother AI decision");
         const data = await res.json();
-        setMotherAiDecision(data);
+        if (isMounted) setMotherAiDecision(data);
       } catch (err) {
         console.error("Mother AI fetch error:", err);
-        setAiError(err.message);
+        if (isMounted) setAiError(err.message);
       }
     };
 
     fetchDecision();
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   return (
@@ -34,8 +38,12 @@ export default function Dashboard() {
         {motherAiDecision && (
           <div className="p-4 border border-gray-700 rounded bg-gray-800 text-white shadow">
             <h3 className="text-xl font-semibold mb-2">Mother AI Trade Decision</h3>
-            <p><strong>Symbol:</strong> {motherAiDecision?.symbol ?? "N/A"}</p>
-            <p><strong>Action:</strong> {motherAiDecision?.action ?? "N/A"}</p>
+            <p>
+              <strong>Symbol:</strong> {motherAiDecision?.symbol ?? "N/A"}
+            </p>
+            <p>
+              <strong>Action:</strong> {motherAiDecision?.action ?? "N/A"}
+            </p>
             <p>
               <strong>Allocation %:</strong>{" "}
               {typeof motherAiDecision?.allocation === "number"
@@ -63,7 +71,6 @@ export default function Dashboard() {
         <SymbolAgentCard symbol="ETHUSDT" />
 
         <PriceTicker />
-        <AISuggestionBox />
         <BacktestRunner />
       </div>
 

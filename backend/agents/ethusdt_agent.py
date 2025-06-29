@@ -1,70 +1,59 @@
 import os
-from typing import Optional
 import pandas as pd
 from sklearn.ensemble import RandomForestClassifier
 from joblib import dump, load
 from backend.ml_engine.feature_extractor import extract_features
-import sys
-import os
+from backend.utils.binance_data import fetch_binance_ohlcv
 
-# Add the project root to Python path
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
+MODEL_PATH = "backend/agents/models/ethusdt_model.pkl"
 
 class ETHUSDTAgent:
     def __init__(self):
-        # Resolve model path relative to this file
-        base_dir = os.path.dirname(os.path.abspath(__file__))
-        self.model_path = os.path.join(base_dir, "models", "ethusdt_model.pkl")
-        self.model: Optional[RandomForestClassifier] = None
+        if os.path.exists(MODEL_PATH):
+            self.model = load(MODEL_PATH)
+        else:
+            self.model = None
+            print(f"Model file not found at {MODEL_PATH}")
 
-    def train(self, data_path: str):
-        """
-        Train the model on historical OHLCV data and save it.
-        """
-        df = pd.read_csv(data_path)
+    def train(self, csv_path: str):
+        df = pd.read_csv(csv_path)
         df.columns = [c.lower() for c in df.columns]
-
         features, labels = extract_features(df)
+        model = RandomForestClassifier(n_estimators=100, random_state=42)
+        model.fit(features, labels)
+        os.makedirs(os.path.dirname(MODEL_PATH), exist_ok=True)
+        dump(model, MODEL_PATH)
+        self.model = model
+        print(f"ETHUSDT model trained and saved to {MODEL_PATH}")
 
-        self.model = RandomForestClassifier(n_estimators=100, random_state=42)
-        self.model.fit(features, labels)
-
-        os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
-        dump(self.model, self.model_path)
-        print(f"ETHUSDT model trained on {len(df)} rows and saved to {self.model_path}")
-
-    def load_model(self):
-        if not os.path.exists(self.model_path):
-            raise FileNotFoundError(f"Model file not found: {self.model_path}")
-        self.model = load(self.model_path)
-
-    def predict(self, df: pd.DataFrame):
+    def predict(self):
         if self.model is None:
-            self.load_model()
-
-        assert self.model is not None, "Model is not loaded"
-
+            raise ValueError("Model is not loaded. Please train or load the model first.")
+        # Fetch latest live OHLCV data from Binance
+        df = fetch_binance_ohlcv("ETHUSDT")
         df.columns = [c.lower() for c in df.columns]
+
+        # Debug print: show column dtypes before cleaning
+        print("Columns and dtypes before dropping datetime:")
+        print(df.dtypes)
+
+        # Drop datetime columns that may cause issues
+        datetime_cols = df.select_dtypes(include=['datetime64[ns]']).columns
+        df = df.drop(columns=datetime_cols)
+
+        # Also drop common timestamp columns if they exist
+        for col in ['open_time', 'timestamp']:
+            if col in df.columns:
+                df = df.drop(columns=[col])
+
         features, _ = extract_features(df)
         latest = features.iloc[-1:]
-
         prediction = self.model.predict(latest)[0]
         confidence = max(self.model.predict_proba(latest)[0])
+        return prediction, round(confidence, 4)
 
-        return {
-            "symbol": "ETHUSDT",
-            "prediction": prediction,
-            "confidence": round(confidence, 4),
-        }
 
 if __name__ == "__main__":
     agent = ETHUSDTAgent()
-
-    # Dynamically resolve path for standalone run
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    data_path = os.path.abspath(os.path.join(current_dir, "..", "..", "backtester", "data", "ETHUSDT_15m.csv"))
-
-    if not os.path.exists(data_path):
-        raise FileNotFoundError(f"ETHUSDT CSV not found at {data_path}")
-
-    agent.train(data_path)
+    # Pass CSV path for training
+    agent.train("backtester/data/ETHUSDT_15m.csv")

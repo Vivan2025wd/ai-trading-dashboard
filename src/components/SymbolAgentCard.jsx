@@ -12,30 +12,49 @@ function SymbolAgentCard({ symbol }) {
   useEffect(() => {
     if (!symbol) return;
 
+    let isMounted = true; // cleanup flag
+
     setLoading(true);
     setError(null);
 
     fetch(`http://localhost:8000/agent/${symbol}/predict`)
-      .then((res) => {
+      .then(async (res) => {
         if (!res.ok) {
-          throw new Error(`API error: ${res.statusText}`);
+          // Try to parse error message from JSON response
+          let errorMessage = `API error: ${res.status} ${res.statusText}`;
+          try {
+            const errData = await res.json();
+            if (errData.detail) errorMessage += ` - ${errData.detail}`;
+            else if (errData.message) errorMessage += ` - ${errData.message}`;
+          } catch {
+            // ignore JSON parse errors
+          }
+          throw new Error(errorMessage);
         }
         return res.json();
       })
       .then((data) => {
-        setPredictionData({
-          prediction: data.prediction,
-          confidence: data.confidence,
-          timestamp: data.timestamp,
-        });
+        if (isMounted) {
+          setPredictionData({
+            prediction: data.prediction,
+            confidence: data.confidence,
+            timestamp: data.timestamp,
+          });
+        }
       })
       .catch((err) => {
-        console.error("Fetch error:", err);
-        setError(err.message);
+        if (isMounted) {
+          console.error("Fetch error:", err);
+          setError(err.message);
+        }
       })
       .finally(() => {
-        setLoading(false);
+        if (isMounted) setLoading(false);
       });
+
+    return () => {
+      isMounted = false;
+    };
   }, [symbol]);
 
   if (loading)
@@ -60,11 +79,15 @@ function SymbolAgentCard({ symbol }) {
       </p>
       <p className="mb-1">
         <strong>Confidence:</strong>{" "}
-        {(predictionData.confidence * 100).toFixed(2)}%
+        {typeof predictionData.confidence === "number"
+          ? (predictionData.confidence * 100).toFixed(2) + "%"
+          : "N/A"}
       </p>
       <p className="text-sm text-gray-400">
         <strong>Last updated:</strong>{" "}
-        {new Date(predictionData.timestamp).toLocaleString()}
+        {predictionData.timestamp
+          ? new Date(predictionData.timestamp).toLocaleString()
+          : "N/A"}
       </p>
     </div>
   );
