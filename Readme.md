@@ -1,6 +1,3 @@
-Here is the corrected and properly formatted `README.md` file. You can copy the content below and save it as `README.md` in your project root.
-
-```markdown
 # 🧠 AI Trading Dashboard
 
 A full-stack AI-powered trading platform that combines real-time market data, technical analysis, strategy backtesting, and AI-driven trade suggestions.
@@ -9,26 +6,27 @@ A full-stack AI-powered trading platform that combines real-time market data, te
 
 ## 📋 Table of Contents
 
-- Overview
-- Features
-- Architecture
-- Tech Stack
-- Project Structure
-- Installation
-- Configuration
-- Running the Application
-- API Endpoints
-- Components
-- Backtesting Strategies
-- Data Pipeline
-- Database Setup
-- Development Workflow
-- Troubleshooting
-- Scripts Reference
-- Contributing
-- License
-- Resources
-- Authors
+- [Overview](#-overview)
+- [Features](#-features)
+- [Architecture](#-architecture)
+- [Tech Stack](#-tech-stack)
+- [Project Structure](#-project-structure)
+- [Installation](#-installation)
+- [Configuration](#️-configuration)
+- [Running the Application](#-running-the-application)
+- [API Endpoints](#-api-endpoints)
+- [Components](#-components)
+- [Backtesting Strategies](#-backtesting-strategies)
+- [Data Pipeline](#-data-pipeline)
+- [Database Setup](#-database-setup)
+- [Development Workflow](#-development-workflow)
+- [Testing](#-testing)
+- [Troubleshooting](#-troubleshooting)
+- [Scripts Reference](#-scripts-reference)
+- [Contributing](#-contributing)
+- [License](#-license)
+- [Resources](#-resources)
+- [Authors](#-authors)
 
 ---
 
@@ -209,7 +207,7 @@ ai-trading-dashboard/
 ├── package.json                  # Frontend dependencies
 ├── package-lock.json
 ├── postcss.config.js             # PostCSS config
-├── tailwind.config.jsx           # Tailwind config
+├── tailwind.config.js            # Tailwind config
 ├── test_config.json              # Test backtest config
 └── vite.config.js                # Vite config
 ```
@@ -705,4 +703,3 @@ This project is licensed under the ISC License.
 ---
 
 > ⚠️ **Disclaimer:** This software is for educational purposes only. Trading cryptocurrencies involves significant risk. Always do your own research before making investment decisions.
-```
